@@ -9,10 +9,7 @@ from scipy.optimize import curve_fit
 from scipy.stats import norm
 import seaborn as sns
 import pandas as pd
-import powerlaw
-from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
-                               AutoMinorLocator)
-
+from PIL import Image
 
 def print_help():
     print("usage : folder_path, window size (1 for 10, 2 for 20, ....)")
@@ -110,6 +107,7 @@ def plot_heatmap(dictionary, w_size, storage_dir):
         dataFrame = pd.DataFrame.from_dict(value)
         reversed_df = dataFrame.iloc[::-1]
         ax = sns.heatmap(reversed_df, annot=True, fmt=".2e", vmin=0.0001, vmax=0.01, cmap="viridis")
+        #qui magari metti un if, se il titolo esiste allora non va messo quello qua sotto
         ax.set_title("Heatmap of WMSD for %s robots, w_size:%s" % (key, w_size))
         ax.set_ylabel("alpha")
         ax.set_xlabel("rho")
@@ -210,234 +208,49 @@ def load_pd_positions(dirPath, experiment_type):
     return num_experiment, df
 
 
-### WMSD in time & "Hystogram2d"
+def load_pd_times(dirPath, experiment_type):
+    if (experiment_type != "times"):
+        print("experiment_type could be only $times")
+        exit(-1)
 
-def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, windowed, b_edges, result_time_dir,
-                                             distance_heatmap_dir):
-    for dirName, subdirList, fileList in os.walk(main_folder + '/' + folder_experiments):
+    num_experiment = len([name for name in os.listdir(dirPath) if
+                          (os.path.isfile(os.path.join(dirPath, name)) and (name.endswith('position.tsv')))])
 
-        num_robots = "-1"
-        rho = -1.0
-        alpha = -1.0
-        elements = dirName.split("_")
-        for e in elements:
-            if e.startswith("robots"):
-                num_robots = e.split("#")[-1]
-            if e.startswith("rho"):
-                rho = float(e.split("#")[-1])
-            if e.startswith("alpha"):
-                alpha = float(e.split("#")[-1])
+    if (os.path.exists(dirPath + "/" + experiment_type + ".pkl")):
+        return (num_experiment, pd.read_pickle(dirPath + "/" + experiment_type + ".pkl"))
 
-        if num_robots == "-1" or rho == -1.0 or alpha == -1:
-            continue
+    print("Generating pickle times file")
+    df = pd.DataFrame()
+    for filename in os.listdir(dirPath):
+        if filename.endswith('time_results.tsv'):
+            df_single = pd.read_csv(dirPath + "/" + filename, sep="\t")
+            df = df.append(df_single)
 
-        rho_str = str(rho)
-        alpha_str = str(alpha)
-        #     print("rho", rho_str)
-        #     print("alpha", alpha_str)
-        #     print(dirName)
+    df.to_pickle(dirPath + "/" + experiment_type + ".pkl")
+    return (num_experiment, df)
 
-        total_experiment_wmsd = []
-        baseline_experiment_wmsd = []
+def sort_nested_dict(dictionary):
+    temp = dict()
+    for k1,val1 in sorted(dictionary.items()):
+        temp[k1] = dict()
+        for k2, val2 in sorted(val1.items()):
+            temp[k1][k2] = dict()
+            for k3,val3 in sorted(val2.items()):
+                temp[k1][k2][k3]=val3
+    return temp
 
-        #     print(alpha_str)
+def generate_pdf(folder):
+    if not os.path.isdir(folder):
+        print_help()
+        exit(-1)
 
-        folder_baseline = "2020-04-21_baseline/2020-04-21_robots#1_alpha#%s_rho#%s_baseline_1800" % (alpha_str, rho_str)
-        if not os.path.isdir(main_folder + '/' + folder_baseline):
-            print("folder_baseline is not an existing directory")
-            exit(-1)
+    imagelist = []
+    for dirName, subdirList, fileList in os.walk(folder):
+        fileList.sort()
+        for i in fileList:
+            if (i.endswith(".png")):
+                img = Image.open(dirName + '/' + i)
+                img = img.convert('RGB')
+                imagelist.append(img)
 
-        number_of_experiments = 0
-        df_experiment = pd.DataFrame()
-        df_baseline = pd.DataFrame()
-
-        #         print("W_size=", window_size)
-        [number_of_experiments, df_experiment] = load_pd_positions(dirName, "experiment")
-        [_, df_baseline] = load_pd_positions(main_folder + '/' + folder_baseline, "baseline")
-
-        #     print(number_of_experiments)
-        positions_concatenated = df_experiment.values[:, 1:]
-        [num_robot, num_times] = positions_concatenated.shape
-        positions_concatenated = np.array([x.split(',') for x in positions_concatenated.ravel()], dtype=float)
-        positions_concatenated = positions_concatenated.reshape(num_robot, num_times, 2)
-        print(positions_concatenated.shape)
-
-        baseline_concatenated = df_baseline.values[:, 1:]
-        [num_robot, num_times] = baseline_concatenated.shape
-        baseline_concatenated = np.array([x.split(',') for x in baseline_concatenated.ravel()], dtype=float)
-        baseline_concatenated = baseline_concatenated.reshape(num_robot, num_times, 2)
-
-        for window_size in range(1, 10):
-            w_displacement_array = np.array([])
-            base_w_displacement_array = np.array([])
-
-            if (windowed):
-                base_win_disp = window_displacement(baseline_concatenated, window_size)
-                win_disp = window_displacement(positions_concatenated, window_size)
-            else:
-                win_disp = fixed_window_displacement(positions_concatenated, window_size)
-                base_win_disp = fixed_window_displacement(baseline_concatenated, window_size)
-            w_displacement_array = np.vstack(
-                [w_displacement_array, win_disp]) if w_displacement_array.size else win_disp
-            base_w_displacement_array = np.vstack(
-                [base_w_displacement_array, base_win_disp]) if base_w_displacement_array.size else base_win_disp
-            mean_wmsd = win_disp.mean()
-
-            total_experiment_wmsd.append(w_displacement_array)
-            baseline_experiment_wmsd.append(base_w_displacement_array)
-
-        plot_both_wmsd(windowed, baseline_experiment_wmsd, total_experiment_wmsd, alpha_str, rho_str, num_robots,
-                       result_time_dir)
-
-        # distance_heatmap
-        distances = distance_from_the_origin(positions_concatenated)
-        occurrences = get_occurrences(distances, b_edges)
-
-        time_plot_histogram("unbalanced", occurrences.T, b_edges[1:], alpha_str, rho_str, num_robots,
-                            distance_heatmap_dir)
-
-
-## Heatmaps
-
-
-def evaluate_WMSD_heatmap(main_folder, folder_experiments, windowed, heatmap_dir):
-    for window_size in range(1, 10):
-
-        total_dict = dict()
-        number_dict = dict()
-
-        for dirName, subdirList, fileList in os.walk(main_folder + '/' + folder_experiments):
-
-            num_robots = "-1"
-            rho = -1.0
-            alpha = -1.0
-            elements = dirName.split("_")
-            for e in elements:
-                if e.startswith("robots"):
-                    num_robots = e.split("#")[-1]
-                    if (num_robots not in total_dict):
-                        total_dict[num_robots] = dict()
-                        number_dict[num_robots] = dict()
-
-                if (e.startswith("rho")):
-                    rho = float(e.split("#")[-1])
-                if (e.startswith("alpha")):
-                    alpha = float(e.split("#")[-1])
-
-            #     print(str(count) + " : " + dirName)
-            if (num_robots == "-1" or rho == -1.0 or alpha == -1):
-                continue
-
-            rho_str = str(rho)
-            alpha_str = str(alpha)
-            #     print("rho", rho_str)
-            #     print("alpha", alpha_str)
-            #     print(dirName)
-            if (rho_str not in total_dict[num_robots]):
-                total_dict[num_robots][rho_str] = dict()
-                number_dict[num_robots][rho_str] = dict()
-            #         print(total_dict)
-
-            total_experiment_wmsd = []
-            baseline_experiment_wmsd = []
-
-            folder_baseline = "2020-04-21_baseline/2020-04-21_robots#1_alpha#%s_rho#%s_baseline_1800" % (
-                alpha_str, rho_str)
-
-            number_of_experiments = 0
-            df_experiment = pd.DataFrame()
-            df_baseline = pd.DataFrame()
-
-            #         print("W_size=", window_size)
-            [number_of_experiments, df_experiment] = load_pd_positions(dirName, "experiment")
-            [_, df_baseline] = load_pd_positions(main_folder + '/' + folder_baseline, "baseline")
-
-            #     print(number_of_experiments)
-            positions_concatenated = df_experiment.values[:, 1:]
-            [num_robot, num_times] = positions_concatenated.shape
-            positions_concatenated = np.array([x.split(',') for x in positions_concatenated.ravel()], dtype=float)
-            positions_concatenated = positions_concatenated.reshape(num_robot, num_times, 2)
-
-            baseline_concatenated = df_baseline.values[:, 1:]
-            [num_robot, num_times] = baseline_concatenated.shape
-            baseline_concatenated = np.array([x.split(',') for x in baseline_concatenated.ravel()], dtype=float)
-            baseline_concatenated = baseline_concatenated.reshape(num_robot, num_times, 2)
-
-            w_displacement_array = np.array([])
-            base_w_displacement_array = np.array([])
-
-            if (windowed):
-                base_win_disp = window_displacement(baseline_concatenated, window_size)
-                win_disp = window_displacement(positions_concatenated, window_size)
-            else:
-                win_disp = fixed_window_displacement(positions_concatenated, window_size)
-                base_win_disp = fixed_window_displacement(baseline_concatenated, window_size)
-            w_displacement_array = np.vstack(
-                [w_displacement_array, win_disp]) if w_displacement_array.size else win_disp
-            base_w_displacement_array = np.vstack(
-                [base_w_displacement_array, base_win_disp]) if base_w_displacement_array.size else base_win_disp
-            mean_wmsd = win_disp.mean()
-
-            total_dict[num_robots][rho_str][alpha_str] = mean_wmsd
-            number_dict[num_robots][rho_str][alpha_str] = number_of_experiments
-            total_experiment_wmsd.append(w_displacement_array)
-            baseline_experiment_wmsd.append(base_w_displacement_array)
-
-            #         print(heatmap_dir)
-            print(total_dict)
-            plot_heatmap(total_dict, window_size, heatmap_dir)
-
-
-def origin_distance_distribution(main_folder, folder_experiments, heatmap_dir):
-    for dirName, subdirList, fileList in os.walk(main_folder + '/' + folder_experiments):
-
-        num_robots = "-1"
-        rho = -1.0
-        alpha = -1.0
-        elements = dirName.split("_")
-        for e in elements:
-            if e.startswith("robots"):
-                num_robots = e.split("#")[-1]
-            if e.startswith("rho"):
-                rho = float(e.split("#")[-1])
-            if e.startswith("alpha"):
-                alpha = float(e.split("#")[-1])
-
-        if num_robots == "-1" or rho == -1.0 or alpha == -1:
-            continue
-
-        rho_str = str(rho)
-        alpha_str = str(alpha)
-        #     print("rho", rho_str)
-        #     print("alpha", alpha_str)
-        #     print(dirName)
-
-        total_experiment_wmsd = []
-        baseline_experiment_wmsd = []
-
-        #     print(alpha_str)
-
-        # folder_baseline = "2020-04-21_baseline/2020-04-21_robots#1_alpha#%s_rho#%s_baseline_1800" % (alpha_str, rho_str)
-        # if not os.path.isdir(main_folder + '/' + folder_baseline):
-        #     print("folder_baseline is not an existing directory")
-        #     exit(-1)
-
-        number_of_experiments = 0
-        df_experiment = pd.DataFrame()
-        df_baseline = pd.DataFrame()
-
-        #         print("W_size=", window_size)
-        [number_of_experiments, df_experiment] = load_pd_positions(dirName, "experiment")
-        # [_, df_baseline] = load_pd_positions(main_folder + '/' + folder_baseline, "baseline")
-
-        #     print(number_of_experiments)
-        positions_concatenated = df_experiment.values[:, 1:]
-        [num_robot, num_times] = positions_concatenated.shape
-        positions_concatenated = np.array([x.split(',') for x in positions_concatenated.ravel()], dtype=float)
-        positions_concatenated = positions_concatenated.reshape(num_robot, num_times, 2)
-        print(positions_concatenated.shape)
-
-        distances = distance_from_the_origin(positions_concatenated)
-        fit = powerlaw.Fit(distances)
-        fit.plot_pdf(linewidth=2)
-
+    imagelist[0].save(folder + '/plots.pdf', save_all=True, append_images=imagelist)
