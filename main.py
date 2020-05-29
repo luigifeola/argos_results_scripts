@@ -30,18 +30,39 @@ def main():
     + If it is an open space experiment for diffusion evaluation set True open_space_flag
     + Time stats: for convergence time and first passage time stats set True time_stats_flag
     + Pdf plots generation : set True generate_pdf_flag
+    + bias_flag True to choose baseline_openspace as baseline folder
     *****************************************************************************************************************'''
     wmsd_heatmaps_flag = True
     comparison_plots_flag = True
     open_space_flag = False
     time_stats_flag = True
-    generate_pdf_flag = True
+    generate_pdf_flag = False
+    bias_flag = True
 
     main_folder = "./results"
+    '''Folder baseline'''
+    # be careful on this path and especially its sub-folder if you generate new baseline results
+
+
+    if bias_flag:
+        baseline_dir = os.path.join(main_folder, "baseline_openspace")
+        if not os.path.exists(baseline_dir):
+            print("Baseline:"+baseline_dir+" not an existing directory")
+            exit(-1)
+        baseline_dir += "/2020-05-28_robots#1_"
+    else:
+        baseline_dir = os.path.join(main_folder, "baseline")
+        if not os.path.exists(baseline_dir):
+            print("Baseline:"+baseline_dir+" not an existing directory")
+            exit(-1)
+        baseline_dir += "/2020-05-27_robots#1_"
+
+    print("Baseline_dir:"+baseline_dir)
+
+
     '''Generate folder to store plots and heatmaps'''
     script_dir = os.path.abspath("")
     results_dir = os.path.join(script_dir, "Plots/" + folder_experiments, "")
-    # results_dir = "/home/luigi/Desktop/prova"
 
     wmsd_dir = os.path.join(results_dir, "WMSD", "")
 
@@ -85,7 +106,9 @@ def main():
             print("Error: directory already exists")
             exit(-1)
 
-        wmsd_time_history.evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, windowed, bin_edges, result_time_dir,distance_heatmap_dir)
+        wmsd_time_history.evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, baseline_dir,
+                                                                   windowed, bin_edges, result_time_dir,
+                                                                   distance_heatmap_dir)
 
 
     '''***************WMSD Heatmaps***************************************'''

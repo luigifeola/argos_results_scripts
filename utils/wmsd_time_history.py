@@ -14,8 +14,8 @@ from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                AutoMinorLocator)
 
 ### WMSD in time & "Hystogram2d"
-def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, windowed, b_edges, result_time_dir,
-                                             distance_heatmap_dir):
+def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, baseline_dir, windowed, b_edges,
+                                             result_time_dir, distance_heatmap_dir):
     for dirName, subdirList, fileList in os.walk(main_folder + '/' + folder_experiments):
 
         # print(dirName)
@@ -45,10 +45,10 @@ def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, wi
 
         #     print(alpha_str)
 
-        folder_baseline = "baseline_2020-02-14/2020-02-14_robots#1_alpha#%s_rho#%s_baseline_1800" % (alpha_str, rho_str)
-        if not os.path.isdir(main_folder + '/' + folder_baseline):
-            print("folder_baseline is not an existing directory")
-            exit(-1)
+        folder_baseline = baseline_dir+"alpha#%s_rho#%s_baseline_1800" % (alpha_str, rho_str)
+        # if not os.path.isdir(main_folder + '/' + folder_baseline):
+        #     print("folder_baseline is not an existing directory")
+        #     exit(-1)
 
         number_of_experiments = 0
         df_experiment = pd.DataFrame()
@@ -56,7 +56,7 @@ def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, wi
 
         #         print("W_size=", window_size)
         [number_of_experiments, df_experiment] = utils.load_pd_positions(dirName, "experiment")
-        [_, df_baseline] = utils.load_pd_positions(main_folder + '/' + folder_baseline, "baseline")
+        [_, df_baseline] = utils.load_pd_positions(folder_baseline, "baseline")
 
         #     print(number_of_experiments)
         positions_concatenated = df_experiment.values[:, 1:]

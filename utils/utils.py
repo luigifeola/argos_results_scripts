@@ -196,11 +196,15 @@ def load_pd_positions(dirPath, experiment_type):
 
     if os.path.exists(dirPath + "/" + experiment_type + ".pkl"):
         return num_experiment, pd.read_pickle(dirPath + "/" + experiment_type + ".pkl")
+    # else:
+    #     print("Baseline:"+dirPath+" not an existing path")
+    #     exit(-1)
 
     print("Generating pickle positions file in " + dirPath + "/" + experiment_type + ".pkl")
     df = pd.DataFrame()
     for filename in os.listdir(dirPath):
-        if filename.endswith('position.tsv'):
+        if filename.endswith('position.tsv') and os.path.getsize(os.path.join(dirPath, filename)) > 0:
+            # print("Filename :"+filename)
             df_single = pd.read_csv(dirPath + "/" + filename, sep="\t")
             df = df.append(df_single)
 
