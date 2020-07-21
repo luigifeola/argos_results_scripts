@@ -10,6 +10,8 @@ from scipy.stats import norm
 import seaborn as sns
 import pandas as pd
 from PIL import Image
+from natsort import natsorted
+
 
 def print_help():
     print("usage : folder_path, window size (1 for 10, 2 for 20, ....)")
@@ -45,7 +47,7 @@ def get_occurrences(distances, edges):
     return hist_val
 
 
-def time_plot_histogram(file_title, values, y_edges, alpha, rho, num_robots, storagePath):
+def time_plot_histogram(values, y_edges, alpha, rho, num_robots, storagePath):
     y_edges = y_edges.round(decimals=3)
     fig = plt.figure(figsize=(10, 5), dpi=160)
     plt.ylabel('Distance from origin')
@@ -53,7 +55,17 @@ def time_plot_histogram(file_title, values, y_edges, alpha, rho, num_robots, sto
     plt.legend()
     yticks = y_edges
     # plt.imshow(distances,interpolation='none')
-    ax = sns.heatmap(values, yticklabels=yticks, vmin=0, cmap="viridis")
+    if num_robots == "10":
+        v_max = 1200
+    elif num_robots == "20":
+        v_max = 1750
+    elif num_robots == "50":
+        v_max = 5000
+    elif num_robots == "100":
+        v_max = 9000
+    else:
+        print("Type", type(num_robots))
+    ax = sns.heatmap(values, yticklabels=yticks, vmin=0, vmax=v_max, cmap="viridis")
     ax.set_title(
         "Robots diffusion with " + r"$\bf{Robots}$:" + num_robots + r" $\bf{\rho}:$" + rho + " and " + r"$\bf{\alpha}:$" + alpha)
     file_name = "dist_heat_robots_%s_rho_%s_alpha_%s.png" % (num_robots, rho, alpha)
@@ -107,7 +119,7 @@ def plot_heatmap(dictionary, w_size, storage_dir):
         dataFrame = pd.DataFrame.from_dict(value)
         reversed_df = dataFrame.iloc[::-1]
         ax = sns.heatmap(reversed_df, annot=True, fmt=".2e", vmin=0.0001, vmax=0.01, cmap="viridis")
-        #qui magari metti un if, se il titolo esiste allora non va messo quello qua sotto
+        # qui magari metti un if, se il titolo esiste allora non va messo quello qua sotto
         ax.set_title("Heatmap of WMSD for %s robots, w_size:%s" % (key, w_size))
         ax.set_ylabel("alpha")
         ax.set_xlabel("rho")
@@ -203,8 +215,10 @@ def load_pd_positions(dirPath, experiment_type):
     print("Generating pickle positions file in " + dirPath + "/" + experiment_type + ".pkl")
     df = pd.DataFrame()
     for filename in os.listdir(dirPath):
-        if filename.endswith('position.tsv') and os.path.getsize(os.path.join(dirPath, filename)) > 0:
-            # print("Filename :"+filename)
+        if filename.endswith('position.tsv'):
+            if not os.path.getsize(os.path.join(dirPath, filename)) > 0:
+                print("Error, empty file at:" + os.path.join(dirPath, filename))
+                continue
             df_single = pd.read_csv(dirPath + "/" + filename, sep="\t")
             df = df.append(df_single)
 
@@ -233,15 +247,17 @@ def load_pd_times(dirPath, experiment_type):
     df.to_pickle(dirPath + "/" + experiment_type + ".pkl")
     return (num_experiment, df)
 
+
 def sort_nested_dict(dictionary):
     temp = dict()
-    for k1,val1 in sorted(dictionary.items()):
+    for k1, val1 in sorted(dictionary.items()):
         temp[k1] = dict()
         for k2, val2 in sorted(val1.items()):
             temp[k1][k2] = dict()
-            for k3,val3 in sorted(val2.items()):
-                temp[k1][k2][k3]=val3
+            for k3, val3 in sorted(val2.items()):
+                temp[k1][k2][k3] = val3
     return temp
+
 
 def generate_pdf(folder):
     if not os.path.isdir(folder):
@@ -250,11 +266,11 @@ def generate_pdf(folder):
 
     imagelist = []
     for dirName, subdirList, fileList in os.walk(folder):
-        fileList.sort()
-        for i in fileList:
+        for i in natsorted(fileList):
             if (i.endswith(".png")):
                 img = Image.open(dirName + '/' + i)
                 img = img.convert('RGB')
                 imagelist.append(img)
 
-    imagelist[0].save(folder + '/plots.pdf', save_all=True, append_images=imagelist)
+    imagelist[0].save(folder + os.path.basename(os.path.normpath(folder)) + '.pdf', save_all=True,
+                      append_images=imagelist)

@@ -96,5 +96,5 @@ def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, ba
         distances = utils.distance_from_the_origin(positions_concatenated)
         occurrences = utils.get_occurrences(distances, b_edges)
 
-        utils.time_plot_histogram("unbalanced", occurrences.T, b_edges[1:], alpha_str, rho_str, num_robots,
+        utils.time_plot_histogram(occurrences.T, b_edges[1:], alpha_str, rho_str, num_robots,
                             distance_heatmap_dir)

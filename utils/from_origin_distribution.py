@@ -60,14 +60,14 @@ def distance_from_origin_distribution(main_folder, folder_experiments, powerlaw_
         distances = utils.distance_from_the_origin(positions_concatenated)
         # print("distances.shape", distances.shape)
         fig = plt.figure(figsize=(10, 5), dpi=160)
-        plt.xlim((0.001, 1))
-        plt.ylim((0.01, 100))
+        plt.xlim((0.001, 100))
+        plt.ylim((0.0001, 100))
         for i, d in enumerate(distances):
             fit = powerlaw.Fit(d, xmin=0.00001)
             # print(i)
             fit.plot_pdf(linewidth=2, color=mapcolors[i])
-        plt.title("origin distance distribution with %s robots, alpha=%s, rho=%s" % (num_robot, alpha, rho))
-        file_name = "origin_distance_distr_%s_rho_%s_alpha_%s.png" % (num_robot, rho, alpha)
+        plt.title("origin distance distribution with %s robots, alpha=%s, rho=%s" % (num_robots, alpha, rho))
+        file_name = "powerlaw_%s_rho_%s_alpha_%s.png" % (num_robots, rho, alpha)
         plt.savefig(powerlaw_dir + '/' + file_name)
         plt.close(fig)
 

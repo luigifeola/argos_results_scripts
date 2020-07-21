@@ -13,7 +13,7 @@ import pandas as pd
 from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                AutoMinorLocator)
 
-def evaluate_WMSD_heatmap(main_folder, folder_experiments, windowed, heatmap_dir):
+def evaluate_WMSD_heatmap(main_folder, folder_experiments, baseline_dir, windowed, heatmap_dir):
     for window_size in range(1,10):
 
         total_dict=dict()
@@ -58,7 +58,8 @@ def evaluate_WMSD_heatmap(main_folder, folder_experiments, windowed, heatmap_dir
             total_experiment_wmsd = []
             baseline_experiment_wmsd = []
 
-            folder_baseline = "baseline_2020-02-14/2020-02-14_robots#1_alpha#%s_rho#%s_baseline_1800" %(alpha_str, rho_str)
+            # folder_baseline = "baseline_2020-02-14/2020-02-14_robots#1_alpha#%s_rho#%s_baseline_1800" %(alpha_str, rho_str)
+            folder_baseline = baseline_dir + "alpha#%s_rho#%s_baseline_1800" % (alpha_str, rho_str)
 
             number_of_experiments = 0
             df_experiment = pd.DataFrame()
@@ -66,7 +67,7 @@ def evaluate_WMSD_heatmap(main_folder, folder_experiments, windowed, heatmap_dir
 
         #         print("W_size=", window_size)
             [number_of_experiments, df_experiment] = utils.load_pd_positions(dirName, "experiment")
-            [_, df_baseline] = utils.load_pd_positions(main_folder+'/'+folder_baseline, "baseline")
+            [_, df_baseline] = utils.load_pd_positions(folder_baseline, "baseline")
 
 
         #     print(number_of_experiments)
