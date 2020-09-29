@@ -29,18 +29,15 @@ def get_connections(positions):
 def connection_heatmap(edges, time_connections, alpha, rho, num_robots, avg_connection_degree_dir):
     y_edges = edges[1:].round(decimals=3)
     fig = plt.figure(figsize=(10, 5), dpi=160)
-#     plt.ylabel('distance from the origin')
-#     plt.xlabel('time(s)')
-#     plt.legend()
     yticks = y_edges
     ax = sns.heatmap(time_connections, yticklabels=yticks, cmap="viridis")
     ax.set_title(
         "Average connection from the origin with " + r"$\bf{Robots}$:" + num_robots + r" $\bf{\rho}:$" + rho + " and " + r"$\bf{\alpha}:$" + alpha)
+    ax.set_ylabel('distance from the origin')
+    ax.set_xlabel('time')
     file_name = "average_connection_heatmap_robots_%s_rho_%s_alpha_%s.png" % (num_robots, rho, alpha)
     plt.savefig(avg_connection_degree_dir + '/' + file_name)
     plt.close(fig)
-#     ax.set_title('Average connection from the origin')
-#     plt.show()
 
 # Average connection degree distribuited over different circular section positions (using Heatmaps)
 def avg_connection_degree_heatmap(folder_experiment, avg_connection_degree_dir):
@@ -101,10 +98,15 @@ def avg_connection_degree_heatmap(folder_experiment, avg_connection_degree_dir):
             for edge_idx in range(config.bin_edges.size - 1):
                 #         print(bin_edges[edge_idx],bin_edges[edge_idx+1])
                 #         print("\t",edge_idx)
-                
-                where_index = np.where(
-                    np.logical_and(distance_t >= config.bin_edges[edge_idx], distance_t < config.bin_edges[edge_idx + 1]))
-                connection_in_time[edge_idx, idx] = np.mean(connection_number_history[where_index])
+
+                if edge_idx < config.bin_edges.size - 1 or not config.open_space_flag:
+                    where_index = np.where(
+                        np.logical_and(distance_t >= config.bin_edges[edge_idx], distance_t < config.bin_edges[edge_idx + 1]))
+                    connection_in_time[edge_idx, idx] = np.mean(connection_number_history[where_index])
+
+                else:
+                    where_index = np.where(distance_t >= config.bin_edges[edge_idx])
+                    connection_in_time[edge_idx, idx] = np.mean(connection_number_history[where_index])
 
         connection_heatmap(config.bin_edges, connection_in_time, alpha_str, rho_str, num_robots, avg_connection_degree_dir)
 
@@ -154,6 +156,8 @@ def avg_connection_plot_different_population_sizes(folder_experiment, avg_connec
                 positions_concatenated = np.array([x.split(',') for x in positions_concatenated.ravel()], dtype=float)
                 positions_concatenated = positions_concatenated.reshape(num_robot, num_times, 2)
 
+                print("runs", runs)
+                print("positions_concatenated.shape:", positions_concatenated.shape)
                 position_concatenated_split = np.split(positions_concatenated, runs)
 
                 connection_number_history = np.array([])

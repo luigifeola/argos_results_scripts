@@ -66,6 +66,8 @@ def distance_from_origin_distribution(main_folder, folder_experiments, powerlaw_
             fit = powerlaw.Fit(d, xmin=0.00001)
             # print(i)
             fit.plot_pdf(linewidth=2, color=mapcolors[i])
+        plt.ylabel('p(x)')
+        plt.xlabel('distance from origin')
         plt.title("origin distance distribution with %s robots, alpha=%s, rho=%s" % (num_robots, alpha, rho))
         file_name = "powerlaw_%s_rho_%s_alpha_%s.png" % (num_robots, rho, alpha)
         plt.savefig(powerlaw_dir + '/' + file_name)

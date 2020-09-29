@@ -31,18 +31,16 @@ def distance_from_the_origin(df_values):
     return distances
 
 
-def get_occurrences(distances, edges):
+def get_occurrences(distances, edges, runs):
     hist_val = np.array([])
     for x in distances:
         hist, _ = np.histogram(x, edges)
         #     print(i,hist)
         hist_val = np.vstack([hist_val, hist]) if hist_val.size else hist
 
-    # TODO : put an "if" here if you want choose among
-    #       balanced values or not
     for i in range(edges[1:].size):
         area = np.pi * (np.square(edges[1:][i]) - np.square(edges[1:][i - 1])) if i else np.pi * np.square(edges[1:][i])
-        hist_val[:, i] = np.true_divide(hist_val[:, i], area)
+        hist_val[:, i] = np.true_divide(hist_val[:, i], area*runs)
 
     return hist_val
 
@@ -50,24 +48,30 @@ def get_occurrences(distances, edges):
 def time_plot_histogram(values, y_edges, alpha, rho, num_robots, storagePath):
     y_edges = y_edges.round(decimals=3)
     fig = plt.figure(figsize=(10, 5), dpi=160)
-    plt.ylabel('Distance from origin')
-    plt.xlabel('time(s)')
-    plt.legend()
+    # plt.ylabel('Distance from origin')
+    # plt.xlabel('time(s)')
+    # plt.legend()
     yticks = y_edges
     # plt.imshow(distances,interpolation='none')
+
+    # print("num_robots:", num_robots, end="")
     if num_robots == "10":
-        v_max = 1200
+        v_max = 25
     elif num_robots == "20":
-        v_max = 1750
+        v_max = 50
     elif num_robots == "50":
-        v_max = 5000
+        v_max = 120
     elif num_robots == "100":
-        v_max = 9000
+        v_max = 200
     else:
         print("Type", type(num_robots))
-    ax = sns.heatmap(values, yticklabels=yticks, vmin=0, vmax=v_max, cmap="viridis")
+
+    # print("\t v_max:", v_max)
+    ax = sns.heatmap(values, yticklabels=yticks, cmap="viridis", vmin=0, vmax=v_max)
     ax.set_title(
         "Robots diffusion with " + r"$\bf{Robots}$:" + num_robots + r" $\bf{\rho}:$" + rho + " and " + r"$\bf{\alpha}:$" + alpha)
+    ax.set_ylabel('distance from the origin')
+    ax.set_xlabel('time')
     file_name = "dist_heat_robots_%s_rho_%s_alpha_%s.png" % (num_robots, rho, alpha)
     plt.savefig(storagePath + '/' + file_name)
     plt.close(fig)
@@ -107,7 +111,7 @@ def fixed_window_displacement(df, window_size):
         w_displacement_matrix = np.column_stack([w_displacement_matrix, wmsd]) if w_displacement_matrix.size else wmsd
 
     w_displacement_array = np.mean(w_displacement_matrix, axis=0)
-    return (w_displacement_array)
+    return w_displacement_array
 
 
 #     wmsd = np.mean(w_displacement_array)
@@ -207,6 +211,7 @@ def load_pd_positions(dirPath, experiment_type):
                           (os.path.isfile(os.path.join(dirPath, name)) and (name.endswith('position.tsv')))])
 
     if os.path.exists(dirPath + "/" + experiment_type + ".pkl"):
+        # print("Loading pickle positions file in " + dirPath + "/" + experiment_type + ".pkl")
         return num_experiment, pd.read_pickle(dirPath + "/" + experiment_type + ".pkl")
     # else:
     #     print("Baseline:"+dirPath+" not an existing path")

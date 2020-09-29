@@ -1,16 +1,4 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import csv
-import sys
 import os
-from scipy import stats
-import math
-from scipy.optimize import curve_fit
-from scipy.stats import norm
-import seaborn as sns
-import pandas as pd
-from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
-                               AutoMinorLocator)
 import warnings
 
 from utils import utils
@@ -24,12 +12,16 @@ from utils import average_connection_degree
 # TODO : fix the necessity of define folder_baseline in the for loop
 # TODO : fix file_title in time_plot_histogram
 # TODO : fix mkdir directories just if you need it and not before
+# TODO : add axis label to the plots (especially to the heatmaps)
 
 def main():
     # config.folder_experiments = "2020-05-25_simple_collision_avoidance_experiment"
 
 
     main_folder = os.path.join(os.getcwd(), "results")
+
+    # For debug
+    # main_folder = os.path.join(os.getcwd(), "test")
     # print("Main path:", main_folder)
 
     # Check if experiment result folder exists
@@ -56,7 +48,10 @@ def main():
 
     '''**************************Generate folder to store plots and heatmaps*************************************'''
     script_dir = os.path.abspath("")
-    results_dir = os.path.join(script_dir, "Plots/" + config.folder_experiments, "")
+    # results_dir = os.path.join(script_dir, "Plots/" + config.folder_experiments, "")
+
+    # For debug
+    results_dir = os.path.join(main_folder, "Plots/" + config.folder_experiments, "")
 
     # Check if experiment result folder plots exists, else raise a warning
     if not os.path.isdir(results_dir):
@@ -65,23 +60,6 @@ def main():
     else:
         warnings.warn("WARNING: results_dir already exists")
 
-
-
-    '''******************************************************************'''
-    '''*************average connection degree evaluations****************'''
-    '''******************************************************************'''
-    if config.connection_degree_flag:
-        avg_connection_degree_dir = os.path.join(results_dir, "average_connection_degree", "")
-        if not os.path.isdir(avg_connection_degree_dir):
-            os.makedirs(avg_connection_degree_dir)
-            print("mkdir:" + avg_connection_degree_dir)
-        else:
-            print("Error: directory "+avg_connection_degree_dir+" already exists")
-            exit(-1)
-
-        folder_experiment = os.path.join(main_folder, config.folder_experiments)
-        average_connection_degree.avg_connection_plot_different_population_sizes(folder_experiment, avg_connection_degree_dir)
-        average_connection_degree.avg_connection_degree_heatmap(folder_experiment, avg_connection_degree_dir)
     '''******************************************************************'''
     '''***************WMSD evaluations***********************************'''
     '''******************************************************************'''
@@ -105,9 +83,9 @@ def main():
             print("Error: directory already exists")
             exit(-1)
 
-        wmsd_time_history.evaluate_history_WMSD_and_time_diffusion(main_folder, config.folder_experiments, baseline_dir,
-                                                                   config.windowed, config.bin_edges, result_time_dir,
-                                                                   density_maps_dir)
+        wmsd_time_history.evaluate_history_WMSD_and_time_diffusion(main_folder, config.folder_experiments,
+                                                                   baseline_dir, config.windowed, config.bin_edges,
+                                                                   result_time_dir, density_maps_dir)
 
     '''***************WMSD Heatmaps***************************************'''
     if config.wmsd_heatmaps_flag:
@@ -118,7 +96,26 @@ def main():
         else:
             print("Error: directory already exists")
             exit(-1)
-        wmsd_heatmaps.evaluate_WMSD_heatmap(main_folder, config.folder_experiments, baseline_dir, config.windowed, heatmap_dir)
+        wmsd_heatmaps.evaluate_WMSD_heatmap(main_folder, config.folder_experiments, baseline_dir, config.windowed,
+                                            heatmap_dir)
+
+
+    '''******************************************************************'''
+    '''*************average connection degree evaluations****************'''
+    '''******************************************************************'''
+    if config.connection_degree_flag:
+        avg_connection_degree_dir = os.path.join(results_dir, "average_connection_degree", "")
+        if not os.path.isdir(avg_connection_degree_dir):
+            os.makedirs(avg_connection_degree_dir)
+            print("mkdir:" + avg_connection_degree_dir)
+        else:
+            print("Error: directory "+avg_connection_degree_dir+" already exists")
+            exit(-1)
+
+        folder_experiment = os.path.join(main_folder, config.folder_experiments)
+        average_connection_degree.avg_connection_plot_different_population_sizes(folder_experiment, avg_connection_degree_dir)
+        average_connection_degree.avg_connection_degree_heatmap(folder_experiment, avg_connection_degree_dir)
+
 
     '''******************************************************************'''
     '''***************Powerlaw for openspace experiments*****************'''
@@ -166,7 +163,7 @@ def main():
                                        bound_is)
 
     if config.generate_pdf_flag:
-        print("Generating pdf Plots")
+        print("Generating pdf Plots in folder: ", results_dir)
         utils.generate_pdf(results_dir)
 
 

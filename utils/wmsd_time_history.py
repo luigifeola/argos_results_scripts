@@ -13,6 +13,8 @@ import pandas as pd
 from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                AutoMinorLocator)
 
+from utils import config
+
 ### WMSD in time & "Hystogram2d"
 def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, baseline_dir, windowed, b_edges,
                                              result_time_dir, distance_heatmap_dir):
@@ -26,14 +28,19 @@ def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, ba
         for e in elements:
             if e.startswith("robots"):
                 num_robots = e.split("#")[-1]
-            if (e.startswith("rho")):
+            if e.startswith("rho"):
                 rho = float(e.split("#")[-1])
-            if (e.startswith("alpha")):
+            if e.startswith("alpha"):
                 alpha = float(e.split("#")[-1])
 
         #         print(num_robots+' '+str(rho)+' '+str(alpha))
         if (num_robots == "-1" or rho == -1.0 or alpha == -1):
             continue
+
+        # print("dirName: ", dirName)
+        runs = len([f for f in fileList if
+                    (os.path.isfile(os.path.join(dirName, f)) and f.endswith('position.tsv'))])
+        # print("runs: ", runs)
 
         rho_str = str(rho)
         alpha_str = str(alpha)
@@ -94,7 +101,8 @@ def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, ba
 
         # distance_heatmap
         distances = utils.distance_from_the_origin(positions_concatenated)
-        occurrences = utils.get_occurrences(distances, b_edges)
+        occurrences = utils.get_occurrences(distances, b_edges, runs)
 
-        utils.time_plot_histogram(occurrences.T, b_edges[1:], alpha_str, rho_str, num_robots,
-                            distance_heatmap_dir)
+        if not config.open_space_flag:
+            utils.time_plot_histogram(occurrences.T, b_edges[1:], alpha_str, rho_str, num_robots,
+                                distance_heatmap_dir)

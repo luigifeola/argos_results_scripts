@@ -41,7 +41,7 @@ def KM_estimator(data, censored):
 #     print(F)
     return F
 
-def weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath):
+def weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath, conv_time_estimation):
     fig, ax = plt.subplots(figsize=(20, 8), dpi= 160, facecolor='w', edgecolor='k')
     '''Textbox with mu and sigma'''
     textstr = '\n'.join((
@@ -55,22 +55,25 @@ def weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath)
             verticalalignment='top', bbox=props)
 
 
-    y_weib=weib_cdf(times_value,popt_weibull[0],popt_weibull[1])
-    error_weib=np.power(y_weib-np.squeeze(F),2)
-    plt.plot(times_value,y_weib,'r',linewidth=5,label="Weibull Distribution")
-    plt.plot(times_value,F,'b',linewidth=5,label="K-M stats")
+    y_weib = weib_cdf(times_value, popt_weibull[0], popt_weibull[1])
+    error_weib = np.power(y_weib-np.squeeze(F),2)
+    plt.plot(times_value, y_weib, 'r', linewidth=5, label="Weibull Distribution")
+    plt.plot(times_value, F, 'b', linewidth=5, label="K-M stats")
     plt.legend(loc=4)
-    plt.ylim(0,1)
-    #label="Alpha "+str(dataset[sample,1])+" Rho "+str(dataset[sample,2])+" Time of First Passage for "+str(censored)+"/"+str(uncensored)+" censored values"
+    plt.ylim(0, 1)
+
     label = figLabel
     plt.title(label)
     plt.xlabel("Number of time steps")
-    plt.ylabel("Synchronisation probability")
+    if conv_time_estimation:
+        plt.ylabel("Synchronisation probability")
+    else:
+        plt.ylabel("Probability of passing over the target")
     #     plt.show()
     plt.savefig(figPath)
     plt.close(fig)
 
-# questa in utils esiste, magari con qualche accorgimento le puoi unire
+# TODO : this already exists in utils, maybe you can use just one of them
 def plot_heatmap(dictionary, title, storage_dir):
     for key, value in sorted(dictionary.items()):
         # print("Key value: ", key, value)
@@ -176,7 +179,7 @@ def evaluate_time_stats(folder, conv_time_dir, ftp_dir, conv_time_estimation, bo
             std_error = std_dev / np.sqrt(times_value.size)
             convergence_time_dict[num_robots][rho_str][alpha_str] = mean
             #     print(times_value.shape)
-            weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath)
+            weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath, conv_time_estimation)
 
             convergence_time_dict = utils.sort_nested_dict(convergence_time_dict)
             plot_heatmap(convergence_time_dict, "Convergence Time", conv_time_dir)
@@ -204,7 +207,7 @@ def evaluate_time_stats(folder, conv_time_dir, ftp_dir, conv_time_estimation, bo
             std_error = std_dev / np.sqrt(times_value.size)
 
             #     print(times_value.shape)
-            weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath)
+            weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath, conv_time_estimation)
             #             print(mean_fpt_dict, end="\n\n")
 
             mean_fpt_dict = utils.sort_nested_dict(mean_fpt_dict)
