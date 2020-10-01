@@ -2,9 +2,9 @@ import numpy as np
 
 
 # folder_experiments = "bias_experiment_100_runs"
-folder_experiments = "bouncing_angle_100_runs"
+# folder_experiments = "bouncing_angle_100_runs"
 # folder_experiments = "simple_experiment_100_runs"
-# folder_experiments = "random_angle_100_runs"
+folder_experiments = "random_angle_100_runs"
 
 
 population_size = 5  # len(10 20 50 100) robots
@@ -24,15 +24,15 @@ windowed = False    # True for overlapping WMSD, False for non-overlapping
                            positions 
 + generate_pdf_flag : set True to generate plots in a single pdf file 
 *****************************************************************************************************************'''
-wmsd_heatmaps_flag = True
+wmsd_heatmaps_flag = False
 comparison_plots_flag = True
 
 # TODO : take the following flag directly from the folder name
 open_space_flag = False
-time_stats_flag = True
+time_stats_flag = False
 baseline_openspace_flag = False  # this is set almost always to False
-connection_degree_flag = True
-generate_pdf_flag = True
+connection_degree_flag = False
+generate_pdf_flag = False
 
 # TODO : fix the flags if openspace origin distance distr not needed
 if open_space_flag:

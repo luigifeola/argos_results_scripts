@@ -114,7 +114,15 @@ def fixed_window_displacement(df, window_size):
     return w_displacement_array
 
 
-#     wmsd = np.mean(w_displacement_array)
+def time_mean_square_displacement(df):
+    tsd_matrix = np.array([])   # time square displacement (mean performed at the end)
+    x0 = df[:, 0]
+    for t in range(1, df.shape[1]):
+        xt = df[:, t]
+        sq_disp = np.sum((xt - x0) ** 2, axis=1)
+        tsd_matrix = np.column_stack([tsd_matrix, sq_disp]) if tsd_matrix.size else sq_disp
+
+    return np.mean(tsd_matrix, axis=0)
 
 
 def plot_heatmap(dictionary, w_size, storage_dir):
@@ -141,7 +149,7 @@ Ncolors = min(colormap.N, Ncolors)
 mapcolors = [colormap(int(x * colormap.N / Ncolors)) for x in range(Ncolors)]
 
 
-def plot_both_wmsd(windowed, base_matrix, total_wmsd_matrix, alpha, rho, num_robots, storage_dir):
+def plot_both_wmsd(base_matrix, total_wmsd_matrix, alpha, rho, num_robots, storage_dir, windowed=True, title="TMSD"):
     fig = plt.figure(figsize=(20, 10), dpi=160, facecolor='w', edgecolor='k')
     for i, y in enumerate(total_wmsd_matrix):
         if (windowed):
@@ -149,11 +157,6 @@ def plot_both_wmsd(windowed, base_matrix, total_wmsd_matrix, alpha, rho, num_rob
         else:
             times = np.linspace(0, len(y) * (i + 1) * 10, len(y), endpoint=True)
 
-        #         print("indice finestra: ", i+1)
-        #         print("numero di punti: ", len(y))
-        #         print("Max val linspace: ", len(y)*(i+1)*10)
-        #         print("times shape:", times.shape)
-        #         print(times)
         plt.plot(times, y, label=i + 1, marker='o', color=mapcolors[i])
 
     for i, y in enumerate(base_matrix):
@@ -164,42 +167,20 @@ def plot_both_wmsd(windowed, base_matrix, total_wmsd_matrix, alpha, rho, num_rob
 
         plt.plot(times, y, label="b" + str(i + 1), linestyle='dashed', alpha=0.6, color=mapcolors[i])
 
-    fig.legend(loc=7, bbox_to_anchor=(0.95, 0.5))  # , prop={'size': 20})
-    #     fig.subplots_adjust(right=0.9)
+    fig.legend(loc=7, bbox_to_anchor=(0.95, 0.5))
     #     plt.show()
 
-    plt.title(
-        "WMSD with different w_size, with " + r"$\bf{Robots}:$" + num_robots + r" $\bf{\rho}:$" + rho + " and " + r"$\bf{\alpha}:$" + alpha)
-    plt.ylabel('WMSD')
+    plt.title(title + ", with " + r"$\bf{Robots}:$" + num_robots + r" $\bf{\rho}:$" + rho + " and " + r"$\bf{\alpha}:$" + alpha)
+    plt.ylabel(title)
     plt.xlabel('time(s)')
-    #     plt.legend(loc='lower right')
-    plt.xticks(np.arange(0, 1900, 200))
-    #     plt.grid(which='minor')
+    # plt.xticks(np.arange(0, 1900, 200))
     plt.grid()
-    plt.ylim((0, 0.01))
-
-    # ax = plt.axes()
-    # #     plt.setp(ax.get_xticklabels(),visible=False)
-    #     # Make a plot with major ticks that are multiples of 20 and minor ticks that
-    #     # are multiples of 5.  Label major ticks with '%d' formatting but don't label
-    #     # minor ticks.
-    #     ax.xaxis.set_major_locator(MultipleLocator(100))
-    #     ax.xaxis.set_major_formatter(FormatStrFormatter('%d'))
-
-    #     # For the minor ticks, use no labels; default NullFormatter.
-    #     ax.xaxis.set_minor_locator(MultipleLocator(10))
-    #     ax.yaxis.set_minor_locator(AutoMinorLocator(2))
-    #     ax.yaxis.set_major_formatter(FormatStrFormatter('%f'))
+    plt.ylim(bottom=0.0, top=40)
 
     #     plt.show();
     fileName = "comparison_robots_%s_rho_%s_alpha_%s.png" % (num_robots, rho, alpha)
     plt.savefig(storage_dir + '/' + fileName)
     plt.close(fig)
-
-
-#     plt.setp(ax2.get_xticklabels(), visible=False)
-#     frame1 = plt.gca()
-#     frame1.axes.label.#().set_visible(False)
 
 
 def load_pd_positions(dirPath, experiment_type):

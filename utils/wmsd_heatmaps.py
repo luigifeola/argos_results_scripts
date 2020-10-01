@@ -93,14 +93,16 @@ def evaluate_WMSD_heatmap(main_folder, folder_experiments, baseline_dir, windowe
                 base_win_disp = utils.window_displacement(baseline_concatenated, window_size)
                 win_disp = utils.window_displacement(positions_concatenated, window_size)
             else:
-                win_disp = utils.fixed_window_displacement(positions_concatenated, window_size)
-                base_win_disp = utils.fixed_window_displacement(baseline_concatenated, window_size)
-            w_displacement_array = np.vstack([w_displacement_array,win_disp]) if w_displacement_array.size else win_disp
-            base_w_displacement_array = np.vstack([base_w_displacement_array,base_win_disp]) if base_w_displacement_array.size else base_win_disp
+                # win_disp = utils.fixed_window_displacement(positions_concatenated, window_size)
+                # base_win_disp = utils.fixed_window_displacement(baseline_concatenated, window_size)
+                win_disp = utils.time_mean_square_displacement(positions_concatenated)
+                base_win_disp = utils.time_mean_square_displacement(baseline_concatenated)
+            w_displacement_array = np.vstack([w_displacement_array, win_disp]) if w_displacement_array.size else win_disp
+            base_w_displacement_array = np.vstack([base_w_displacement_array, base_win_disp]) if base_w_displacement_array.size else base_win_disp
             mean_wmsd = win_disp.mean()
 
-            total_dict[num_robots][rho_str][alpha_str]=mean_wmsd
-            number_dict[num_robots][rho_str][alpha_str]=number_of_experiments
+            total_dict[num_robots][rho_str][alpha_str] = mean_wmsd
+            number_dict[num_robots][rho_str][alpha_str] = number_of_experiments
             total_experiment_wmsd.append(w_displacement_array)
             baseline_experiment_wmsd.append(base_w_displacement_array)
 
