@@ -1,23 +1,16 @@
 from utils import utils
-import matplotlib.pyplot as plt
 import numpy as np
-import csv
-import sys
 import os
-from scipy import stats
-import math
-from scipy.optimize import curve_fit
-from scipy.stats import norm
-import seaborn as sns
 import pandas as pd
-from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
-                               AutoMinorLocator)
 
 from utils import config
 
-### WMSD in time & "Hystogram2d"
-def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, baseline_dir, windowed, b_edges,
+
+# MSD comparisons & Density Maps
+def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, baseline_dir, msd_type, b_edges,
                                              result_time_dir, distance_heatmap_dir):
+    print("MSD Evaluation and/or Density Maps Generation")
+
     for dirName, subdirList, fileList in os.walk(main_folder + '/' + folder_experiments):
 
         # print(dirName)
@@ -34,7 +27,7 @@ def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, ba
                 alpha = float(e.split("#")[-1])
 
         #         print(num_robots+' '+str(rho)+' '+str(alpha))
-        if (num_robots == "-1" or rho == -1.0 or alpha == -1):
+        if num_robots == "-1" or rho == -1.0 or alpha == -1:
             continue
 
         # print("dirName: ", dirName)
@@ -52,7 +45,7 @@ def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, ba
 
         #     print(alpha_str)
 
-        folder_baseline = baseline_dir+"alpha#%s_rho#%s_baseline_1800" % (alpha_str, rho_str)
+        folder_baseline = baseline_dir + "alpha#%s_rho#%s_baseline_1800" % (alpha_str, rho_str)
         # if not os.path.isdir(main_folder + '/' + folder_baseline):
         #     print("folder_baseline is not an existing directory")
         #     exit(-1)
@@ -72,43 +65,45 @@ def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, ba
         positions_concatenated = positions_concatenated.reshape(num_robot, num_times, 2)
         #         print(positions_concatenated.shape)
 
-        baseline_concatenated = df_baseline.values[:, 1:]
-        [num_robot, num_times] = baseline_concatenated.shape
-        baseline_concatenated = np.array([x.split(',') for x in baseline_concatenated.ravel()], dtype=float)
-        baseline_concatenated = baseline_concatenated.reshape(num_robot, num_times, 2)
+        if config.comparison_plots_flag:
+            baseline_concatenated = df_baseline.values[:, 1:]
+            [num_robot, num_times] = baseline_concatenated.shape
+            baseline_concatenated = np.array([x.split(',') for x in baseline_concatenated.ravel()], dtype=float)
+            baseline_concatenated = baseline_concatenated.reshape(num_robot, num_times, 2)
 
-        for window_size in range(1, 10):
-            w_displacement_array = np.array([])
-            base_w_displacement_array = np.array([])
+            for window_size in range(1, 10):
+                w_displacement_array = np.array([])
+                base_w_displacement_array = np.array([])
 
-            if (windowed):
-                base_win_disp = utils.window_displacement(baseline_concatenated, window_size)
-                win_disp = utils.window_displacement(positions_concatenated, window_size)
-            else:
-                # win_disp = utils.fixed_window_displacement(positions_concatenated, window_size)
-                # base_win_disp = utils.fixed_window_displacement(baseline_concatenated, window_size)
-                win_disp = utils.time_mean_square_displacement(positions_concatenated)
-                base_win_disp = utils.time_mean_square_displacement(baseline_concatenated)
+                if msd_type == 'windowed':
+                    base_win_disp = utils.window_displacement(baseline_concatenated, window_size)
+                    win_disp = utils.window_displacement(positions_concatenated, window_size)
+                else:
+                    # win_disp = utils.fixed_window_displacement(positions_concatenated, window_size)
+                    # base_win_disp = utils.fixed_window_displacement(baseline_concatenated, window_size)
+                    win_disp = utils.time_mean_square_displacement(positions_concatenated)
+                    base_win_disp = utils.time_mean_square_displacement(baseline_concatenated)
 
-            w_displacement_array = np.vstack(
-                [w_displacement_array, win_disp]) if w_displacement_array.size else win_disp
-            base_w_displacement_array = np.vstack(
-                [base_w_displacement_array, base_win_disp]) if base_w_displacement_array.size else base_win_disp
-            mean_wmsd = win_disp.mean()
+                w_displacement_array = np.vstack(
+                    [w_displacement_array, win_disp]) if w_displacement_array.size else win_disp
+                base_w_displacement_array = np.vstack(
+                    [base_w_displacement_array, base_win_disp]) if base_w_displacement_array.size else base_win_disp
+                # mean_wmsd = win_disp.mean()
 
-            total_experiment_wmsd.append(w_displacement_array)
-            baseline_experiment_wmsd.append(base_w_displacement_array)
+                total_experiment_wmsd.append(w_displacement_array)
+                baseline_experiment_wmsd.append(base_w_displacement_array)
 
+                if msd_type == 'time_msd':
+                    break
+            # utils.plot_both_wmsd(windowed, baseline_experiment_wmsd, total_experiment_wmsd, alpha_str, rho_str, num_robots,
+            #                     title, result_time_dir)
+            utils.plot_both_wmsd(baseline_experiment_wmsd, total_experiment_wmsd, alpha_str, rho_str, num_robots,
+                                 result_time_dir, msd_type)
 
-        # utils.plot_both_wmsd(windowed, baseline_experiment_wmsd, total_experiment_wmsd, alpha_str, rho_str, num_robots,
-        #                     title, result_time_dir)
-        utils.plot_both_wmsd(baseline_experiment_wmsd, total_experiment_wmsd, alpha_str, rho_str, num_robots,
-                             result_time_dir)
+        if config.density_maps_flag:
+            distances = utils.distance_from_the_origin(positions_concatenated)
+            occurrences = utils.get_occurrences(distances, b_edges, runs)
 
-        # distance_heatmap
-        distances = utils.distance_from_the_origin(positions_concatenated)
-        occurrences = utils.get_occurrences(distances, b_edges, runs)
-
-        if not config.open_space_flag:
-            utils.time_plot_histogram(occurrences.T, b_edges[1:], alpha_str, rho_str, num_robots,
-                                distance_heatmap_dir)
+            if not config.open_space_flag and config.density_maps_flag:
+                utils.time_plot_histogram(occurrences.T, b_edges[1:], alpha_str, rho_str, num_robots,
+                                          distance_heatmap_dir)

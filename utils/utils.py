@@ -31,6 +31,7 @@ def distance_from_the_origin(df_values):
     return distances
 
 
+# get_occurrences : returns weighted density histogram
 def get_occurrences(distances, edges, runs):
     hist_val = np.array([])
     for x in distances:
@@ -40,7 +41,7 @@ def get_occurrences(distances, edges, runs):
 
     for i in range(edges[1:].size):
         area = np.pi * (np.square(edges[1:][i]) - np.square(edges[1:][i - 1])) if i else np.pi * np.square(edges[1:][i])
-        hist_val[:, i] = np.true_divide(hist_val[:, i], area*runs)
+        hist_val[:, i] = np.true_divide(hist_val[:, i], area * runs)
 
     return hist_val
 
@@ -77,11 +78,6 @@ def time_plot_histogram(values, y_edges, alpha, rho, num_robots, storagePath):
     plt.close(fig)
 
 
-'''Windowed mean square displacement'''
-'''Input : dataFrame (num_robot x stored times), window size'''
-'''Output : average wmsd for all the robot at each timestep'''
-
-
 def window_displacement(df, window_size):
     # print(df.shape[1])
     w_displacement_matrix = np.array([])
@@ -94,11 +90,6 @@ def window_displacement(df, window_size):
     #         print(f-window_size, f)
     w_displacement_array = np.mean(w_displacement_matrix, axis=0)
     return (w_displacement_array)
-
-
-'''Fixed window mean square displacement'''
-'''Input : dataFrame (num_robot x stored times), window size'''
-'''Output : average fixed wmsd for all the robot at each timestep'''
 
 
 def fixed_window_displacement(df, window_size):
@@ -115,7 +106,7 @@ def fixed_window_displacement(df, window_size):
 
 
 def time_mean_square_displacement(df):
-    tsd_matrix = np.array([])   # time square displacement (mean performed at the end)
+    tsd_matrix = np.array([])  # time square displacement (mean performed at the end)
     x0 = df[:, 0]
     for t in range(1, df.shape[1]):
         xt = df[:, t]
@@ -125,19 +116,25 @@ def time_mean_square_displacement(df):
     return np.mean(tsd_matrix, axis=0)
 
 
-def plot_heatmap(dictionary, w_size, storage_dir):
+def plot_heatmap(dictionary, msd_type, w_size, storage_dir):
     for key, value in dictionary.items():
         fig = plt.figure(figsize=(12, 8))
         dataFrame = pd.DataFrame.from_dict(value)
         reversed_df = dataFrame.iloc[::-1]
         ax = sns.heatmap(reversed_df, annot=True, fmt=".2e", vmin=0.0001, vmax=0.01, cmap="viridis")
         # qui magari metti un if, se il titolo esiste allora non va messo quello qua sotto
-        ax.set_title("Heatmap of WMSD for %s robots, w_size:%s" % (key, w_size))
+        if msd_type != 'time_msd':
+            ax.set_title("Heatmap of WMSD for %s robots, w_size:%s" % (key, w_size))
+        else:
+            ax.set_title("Heatmap of WMSD for %s robots" % key)
+
         ax.set_ylabel("alpha")
         ax.set_xlabel("rho")
         #         plt.show();
-        # Salva su file
-        file_name = "WMSD_%s_robots_wsize_%s_heatmap.png" % (key, w_size)
+        if msd_type != 'time_msd':
+            file_name = "WMSD_%s_robots_wsize_%s_heatmap.png" % (key, w_size)
+        else:
+            file_name = "WMSD_%s_robots_heatmap.png" % key
         plt.savefig(storage_dir + '/' + file_name)
         plt.close(fig)
 
@@ -149,35 +146,42 @@ Ncolors = min(colormap.N, Ncolors)
 mapcolors = [colormap(int(x * colormap.N / Ncolors)) for x in range(Ncolors)]
 
 
-def plot_both_wmsd(base_matrix, total_wmsd_matrix, alpha, rho, num_robots, storage_dir, windowed=True, title="TMSD"):
+def plot_both_wmsd(base_matrix, total_wmsd_matrix, alpha, rho, num_robots, storage_dir, msd_type='windowed'):
     fig = plt.figure(figsize=(20, 10), dpi=160, facecolor='w', edgecolor='k')
-    for i, y in enumerate(total_wmsd_matrix):
-        if (windowed):
-            times = np.arange(len(y)) * 10
-        else:
-            times = np.linspace(0, len(y) * (i + 1) * 10, len(y), endpoint=True)
-
-        plt.plot(times, y, label=i + 1, marker='o', color=mapcolors[i])
-
-    for i, y in enumerate(base_matrix):
-        if (windowed):
-            times = np.arange(len(y)) * 10
-        else:
-            times = np.linspace(0, len(y) * (i + 1) * 10, len(y), endpoint=True)
-
-        plt.plot(times, y, label="b" + str(i + 1), linestyle='dashed', alpha=0.6, color=mapcolors[i])
-
-    fig.legend(loc=7, bbox_to_anchor=(0.95, 0.5))
-    #     plt.show()
-
-    plt.title(title + ", with " + r"$\bf{Robots}:$" + num_robots + r" $\bf{\rho}:$" + rho + " and " + r"$\bf{\alpha}:$" + alpha)
-    plt.ylabel(title)
-    plt.xlabel('time(s)')
-    # plt.xticks(np.arange(0, 1900, 200))
     plt.grid()
-    plt.ylim(bottom=0.0, top=40)
 
-    #     plt.show();
+    if msd_type == 'time_msd':
+        times = np.arange(len(total_wmsd_matrix[0])) * 10
+        plt.plot(times, total_wmsd_matrix[0], label='TMSD', marker='o', color=mapcolors[0])
+        plt.plot(times, base_matrix[0], label="Baseline", linestyle='dashed', alpha=0.6, color=mapcolors[0])
+        fig.legend(loc=7, bbox_to_anchor=(0.97, 0.5))
+        plt.ylim(bottom=0.0, top=total_wmsd_matrix[0].max() + 0.5)
+
+    else:
+        for i, y in enumerate(total_wmsd_matrix):
+            if msd_type == 'windowed':
+                times = np.arange(len(y)) * 10
+            else:
+                times = np.linspace(0, len(y) * (i + 1) * 10, len(y), endpoint=True)
+
+            plt.plot(times, y, label=i + 1, marker='o', color=mapcolors[i])
+
+        for i, y in enumerate(base_matrix):
+            if msd_type == 'windowed':
+                times = np.arange(len(y)) * 10
+            else:
+                times = np.linspace(0, len(y) * (i + 1) * 10, len(y), endpoint=True)
+
+            plt.plot(times, y, label="b" + str(i + 1), linestyle='dashed', alpha=0.6, color=mapcolors[i])
+
+        fig.legend(loc=7, bbox_to_anchor=(0.95, 0.5))
+        plt.xticks(np.arange(0, 1900, 200))
+        plt.ylim((0, 0.01))
+
+    plt.title(
+        msd_type + ", with " + r"$\bf{Robots}:$" + num_robots + r" $\bf{\rho}:$" + rho + " and " + r"$\bf{\alpha}:$" + alpha)
+    plt.ylabel(msd_type)
+    plt.xlabel('time(s)')
     fileName = "comparison_robots_%s_rho_%s_alpha_%s.png" % (num_robots, rho, alpha)
     plt.savefig(storage_dir + '/' + fileName)
     plt.close(fig)
@@ -220,18 +224,21 @@ def load_pd_times(dirPath, experiment_type):
     num_experiment = len([name for name in os.listdir(dirPath) if
                           (os.path.isfile(os.path.join(dirPath, name)) and (name.endswith('position.tsv')))])
 
-    if (os.path.exists(dirPath + "/" + experiment_type + ".pkl")):
-        return (num_experiment, pd.read_pickle(dirPath + "/" + experiment_type + ".pkl"))
+    if os.path.exists(dirPath + "/" + experiment_type + ".pkl"):
+        return num_experiment, pd.read_pickle(dirPath + "/" + experiment_type + ".pkl")
 
     print("Generating pickle times file")
     df = pd.DataFrame()
     for filename in os.listdir(dirPath):
         if filename.endswith('time_results.tsv'):
+            if not os.path.getsize(os.path.join(dirPath, filename)) > 0:
+                print("Error, empty file at:" + os.path.join(dirPath, filename))
+                continue
             df_single = pd.read_csv(dirPath + "/" + filename, sep="\t")
             df = df.append(df_single)
 
     df.to_pickle(dirPath + "/" + experiment_type + ".pkl")
-    return (num_experiment, df)
+    return num_experiment, df
 
 
 def sort_nested_dict(dictionary):

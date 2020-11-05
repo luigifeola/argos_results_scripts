@@ -3,50 +3,51 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
 import scipy.special as sc
-from scipy.stats import weibull_min
 import pandas as pd
 import os
 import seaborn as sns
-import sys
 
 
-def weib_cdf(x,alpha,gamma):
-    return (1 - np.exp(-np.power(x/alpha,gamma)))
+def weib_cdf(x, alpha, gamma):
+    return (1 - np.exp(-np.power(x / alpha, gamma)))
+
 
 def evaluate_convergence_time(times):
     conv_times = np.zeros(times.shape[0])
-#     print("Time shape", times.shape)
+    #     print("Time shape", times.shape)
     for idx, elem in enumerate(times):
-        if(elem[0] == 0):
+        if (elem[0] == 0):
             conv_times[idx] = elem[1]
         else:
             conv_times[idx] = elem.min()
-    #c_time in ticks
-#     conv_time_batch = np.append(conv_time_batch, conv_times.max())
+    # c_time in ticks
+    #     conv_time_batch = np.append(conv_time_batch, conv_times.max())
     return conv_times
 
-#data = time vector
-#censored = number o missing values
+
+# data = time vector
+# censored = number o missing values
 def KM_estimator(data, censored):
     '''K-M estimator'''
-    n_est=np.asarray(range(0,data.size))[::-1] + censored  #array from 29 to 0
-    RT_sync=[]
+    n_est = np.asarray(range(0, data.size))[::-1] + censored  # array from 29 to 0
+    RT_sync = []
     for i in range(n_est.size):
-        if len(RT_sync)==0:
-            RT_sync.append((n_est[i]-1)/n_est[i])
+        if len(RT_sync) == 0:
+            RT_sync.append((n_est[i] - 1) / n_est[i])
         else:
-            RT_sync.append(RT_sync[-1]*((n_est[i]-1)/n_est[i]))
-#     print(RT_sync)
-    F=1-np.asarray(RT_sync).reshape(-1,1)
-#     print(F)
+            RT_sync.append(RT_sync[-1] * ((n_est[i] - 1) / n_est[i]))
+    #     print(RT_sync)
+    F = 1 - np.asarray(RT_sync).reshape(-1, 1)
+    #     print(F)
     return F
 
+
 def weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath, conv_time_estimation):
-    fig, ax = plt.subplots(figsize=(20, 8), dpi= 160, facecolor='w', edgecolor='k')
+    fig, ax = plt.subplots(figsize=(20, 8), dpi=160, facecolor='w', edgecolor='k')
     '''Textbox with mu and sigma'''
     textstr = '\n'.join((
-        r'$\mu=%.2f$' % (mean, ),
-        r'$\sigma=%.2f$' % (std_dev, )))
+        r'$\mu=%.2f$' % (mean,),
+        r'$\sigma=%.2f$' % (std_dev,)))
 
     # these are matplotlib.patch.Patch properties
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
@@ -54,9 +55,8 @@ def weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath,
     ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,
             verticalalignment='top', bbox=props)
 
-
     y_weib = weib_cdf(times_value, popt_weibull[0], popt_weibull[1])
-    error_weib = np.power(y_weib-np.squeeze(F),2)
+    error_weib = np.power(y_weib - np.squeeze(F), 2)
     plt.plot(times_value, y_weib, 'r', linewidth=5, label="Weibull Distribution")
     plt.plot(times_value, F, 'b', linewidth=5, label="K-M stats")
     plt.legend(loc=4)
@@ -73,23 +73,28 @@ def weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath,
     plt.savefig(figPath)
     plt.close(fig)
 
+
 # TODO : this already exists in utils, maybe you can use just one of them
-def plot_heatmap(dictionary, title, storage_dir):
+def plot_heatmap(dictionary, title, storage_dir, conv_time_estimation=-1):
     for key, value in sorted(dictionary.items()):
         # print("Key value: ", key, value)
-        fig=plt.figure(figsize = (12, 8), dpi=80)
-        dataFrame=pd.DataFrame.from_dict(value)
-        reversed_df=dataFrame.iloc[::-1]
-        ax=sns.heatmap(reversed_df, annot = True, fmt = ".2e", cmap="viridis")
-        ax.set_title(title+", num_robots:%s" % (key))
+        fig = plt.figure(figsize=(12, 8), dpi=80)
+        dataFrame = pd.DataFrame.from_dict(value)
+        reversed_df = dataFrame.iloc[::-1]
+        if conv_time_estimation:
+            ax = sns.heatmap(reversed_df, annot=True, fmt=".2e", vmin=1500, vmax=3000, cmap="viridis")
+        else:
+            ax = sns.heatmap(reversed_df, annot=True, fmt=".2e", vmin=10000, vmax=40000, cmap="viridis")
+        ax.set_title(title + ", num_robots:%s" % key)
         ax.set_ylabel("alpha")
         ax.set_xlabel("rho")
-#         plt.show()
-        #Salva su file
-        file_name=title+"_%s_robots.png" % (key)
-        plt.savefig(storage_dir+'/'+file_name)
-    #     reversed_df.to_pickle(file_name[:-4] + ".pickle")
+        #         plt.show()
+        # Salva su file
+        file_name = title + "_%s_robots.png" % (key)
+        plt.savefig(storage_dir + '/' + file_name)
+        #     reversed_df.to_pickle(file_name[:-4] + ".pickle")
         plt.close(fig)
+
 
 def evaluate_time_stats(folder, conv_time_dir, ftp_dir, conv_time_estimation, bound_is):
     mean_fpt_dict = dict()
@@ -103,16 +108,16 @@ def evaluate_time_stats(folder, conv_time_dir, ftp_dir, conv_time_estimation, bo
         for e in elements:
             if e.startswith("robots"):
                 num_robots = e.split("#")[-1]
-                if (num_robots not in mean_fpt_dict):
+                if num_robots not in mean_fpt_dict:
                     mean_fpt_dict[num_robots] = dict()
                     convergence_time_dict[num_robots] = dict()
 
-            if (e.startswith("rho")):
+            if e.startswith("rho"):
                 rho = float(e.split("#")[-1])
-            if (e.startswith("alpha")):
+            if e.startswith("alpha"):
                 alpha = float(e.split("#")[-1])
 
-        if (num_robots == "0" or rho == -1.0 or alpha == -1):
+        if num_robots == "0" or rho == -1.0 or alpha == -1:
             continue
 
         #     print(num_robots)
@@ -122,7 +127,7 @@ def evaluate_time_stats(folder, conv_time_dir, ftp_dir, conv_time_estimation, bo
         alpha_str = str(alpha)
         #     print("rho", rho_str)
         #     print("alpha", alpha_str)
-        if (rho_str not in mean_fpt_dict[num_robots]):
+        if rho_str not in mean_fpt_dict[num_robots]:
             mean_fpt_dict[num_robots][rho_str] = dict()
             #         print(mean_fpt_dict)
 
@@ -145,7 +150,7 @@ def evaluate_time_stats(folder, conv_time_dir, ftp_dir, conv_time_estimation, bo
         #     print(df_times.shape)
         #     print("num experiments: ", num_experiment)
 
-        if (conv_time_estimation):
+        if conv_time_estimation:
             '''Weibull distribution for Convergence Time'''
 
             # get the time in whitch each robot has at least info about the target
@@ -160,7 +165,7 @@ def evaluate_time_stats(folder, conv_time_dir, ftp_dir, conv_time_estimation, bo
             figLabel = "Convergence Time robots:%s alpha:%s, rho:%s.png" % (num_robots, alpha_str, rho_str)
             #         censored = 1
             censored = convergence_time_batches.size - np.count_nonzero(convergence_time_batches)
-            if (censored):
+            if censored:
                 times_value = convergence_time_batches[censored:].reshape(-1)
             else:
                 censored = 1
@@ -182,7 +187,7 @@ def evaluate_time_stats(folder, conv_time_dir, ftp_dir, conv_time_estimation, bo
             weibull_plot(mean, std_dev, times_value, popt_weibull, F, figLabel, figPath, conv_time_estimation)
 
             convergence_time_dict = utils.sort_nested_dict(convergence_time_dict)
-            plot_heatmap(convergence_time_dict, "Convergence Time", conv_time_dir)
+            plot_heatmap(convergence_time_dict, "Convergence Time", conv_time_dir, conv_time_estimation)
 
         else:
             ''' Weibull distribution for First Passage Time'''
@@ -211,7 +216,7 @@ def evaluate_time_stats(folder, conv_time_dir, ftp_dir, conv_time_estimation, bo
             #             print(mean_fpt_dict, end="\n\n")
 
             mean_fpt_dict = utils.sort_nested_dict(mean_fpt_dict)
-            plot_heatmap(mean_fpt_dict, "Average First Passage Time", ftp_dir)
+            plot_heatmap(mean_fpt_dict, "Average First Passage Time", ftp_dir, conv_time_estimation)
 
     #     print("Convergence Time")
     #     print(convergence_time_dict)
