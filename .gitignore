@@ -4,3 +4,5 @@ example_out
 test
 robaccia
 .ipynb_checkpoints/
+.idea
+*.png
