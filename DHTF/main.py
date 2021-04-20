@@ -66,6 +66,7 @@ def main():
                 # print("Completed areas:", df.shape[0])
                 # print(df)
 
+        print("completed_areas:",completed_areas)
         print(completed_areas.mean())
         experiments[timeout] = completed_areas.mean()
 
