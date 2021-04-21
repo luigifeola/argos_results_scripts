@@ -6,6 +6,7 @@ from termcolor import colored
 import numpy as np
 from collections import OrderedDict
 import matplotlib.pyplot as plt
+import csv
 
 
 def main():
@@ -66,19 +67,28 @@ def main():
                 # print("Completed areas:", df.shape[0])
                 # print(df)
 
-        print("completed_areas:",completed_areas)
-        print(completed_areas.mean())
-        experiments[timeout] = completed_areas.mean()
+        print("completed_areas:", completed_areas)
+        # print(completed_areas.mean())
+        # experiments[timeout] = completed_areas.mean()
+        # break
 
-    print(experiments)
-    experiments = OrderedDict(sorted(experiments.items()))
-    print(experiments)
+        exp_dict = {config.folder_experiments+"#"+str(timeout): completed_areas}
+        # wrt = csv.writer(open("output.csv", "a"))
+        # for key, val in exp_dict.items():
+        #     wrt.writerow([key, val])
+        f = open("output.txt", "a")
+        f.write(str(exp_dict)+'\n')
+        f.close()
 
-    keys = experiments.keys()
-    values = experiments.values()
-
-    plt.bar(keys, values)
-    plt.show()
+    # print(experiments)
+    # experiments = OrderedDict(sorted(experiments.items()))
+    # print(experiments)
+    #
+    # keys = experiments.keys()
+    # values = experiments.values()
+    #
+    # plt.bar(keys, values)
+    # plt.show()
 
 
 if __name__ == '__main__':
