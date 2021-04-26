@@ -60,7 +60,11 @@ def main():
             if filename.endswith("taskLOG_client.tsv"):
                 # print(colored(filename, 'green'))
                 if not os.path.getsize(os.path.join(dirName, filename)) > 0:
-                    print(colored("WARNING, empty file at:" + os.path.join(dirName, filename), 'red'), )
+                    print(colored("WARNING, empty file at:" + os.path.join(dirName, filename), 'red'))
+                    # fm = open("missing.txt", "a")
+                    # fm.write(os.path.join(dirName, filename) + '\n')
+                    # fm.close()
+                    completed_areas = np.append(completed_areas, 0)
                     continue
                 df = pd.read_csv(dirName + "/" + filename, sep="\t", header=None)
                 completed_areas = np.append(completed_areas, df.shape[0])
