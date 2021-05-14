@@ -1,6 +1,9 @@
 results
 Plots
-robaccia
 .ipynb_checkpoints/
 .idea
 *.png
+*.txt
+*.tsv
+DHTF/output.txt
+DHTF/results_*
