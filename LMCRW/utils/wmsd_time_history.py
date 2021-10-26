@@ -1,0 +1,115 @@
+from utils import utils
+import numpy as np
+import os
+import pandas as pd
+from termcolor import colored
+import pickle
+
+from utils import config
+
+
+# MSD comparisons & Density Maps
+def evaluate_history_WMSD_and_time_diffusion(main_folder, folder_experiments, baseline_dir, msd_type, b_edges,
+                                             result_time_dir, distance_heatmap_dir):
+    for dirName, subdirList, fileList in os.walk(main_folder + '/' + folder_experiments):
+
+        num_robots = "-1"
+        rho = -1.0
+        alpha = -1.0
+        elements = dirName.split("_")
+        for e in elements:
+            if e.startswith("robots"):
+                num_robots = e.split("#")[-1]
+            if e.startswith("rho"):
+                rho = float(e.split("#")[-1])
+            if e.startswith("alpha"):
+                alpha = float(e.split("#")[-1])
+
+
+        if num_robots == "-1" or rho == -1.0 or alpha == -1:
+            continue
+
+        # print("dirName: ", dirName)
+        # print('#robots:' + num_robots + ' rho:' + str(rho) + ' alpha:' + str(alpha))
+        runs = len([f for f in fileList if
+                    (os.path.isfile(os.path.join(dirName, f)) and f.endswith('position.tsv'))])
+        # print("# different runs: ", runs)
+
+        rho_str = str(rho)
+        alpha_str = str(alpha)
+        # print("rho", rho_str)
+        # print("alpha", alpha_str, end='\n\n')
+
+        total_experiment_wmsd = []
+        baseline_experiment_wmsd = []
+
+        #     print(alpha_str)
+
+        folder_baseline = baseline_dir + "alpha#%s_rho#%s_baseline_1800" % (alpha_str, rho_str)
+        # print(baseline_dir)
+        # print(folder_baseline)
+        if not os.path.isdir(folder_baseline):
+            print("folder_baseline is not an existing directory")
+            exit(-1)
+
+        #         print("W_size=", window_size)
+        # print('dirName: ', dirName)
+        # print('folder_baseline: ', folder_baseline)
+        [number_of_experiments, df_experiment] = utils.load_pd_positions(dirName, "experiment")
+        [_, df_baseline] = utils.load_pd_positions(folder_baseline, "baseline")
+
+        #     print(number_of_experiments)
+        positions_concatenated = df_experiment.values[:, 1:]
+        [num_robot, num_times] = positions_concatenated.shape
+        positions_concatenated = np.array([x.split(',') for x in positions_concatenated.ravel()], dtype=float)
+        positions_concatenated = positions_concatenated.reshape(num_robot, num_times, 2)
+        #         print(positions_concatenated.shape)
+
+        if config.comparison_plots_flag:
+            baseline_concatenated = df_baseline.values[:, 1:]
+            [num_robot, num_times] = baseline_concatenated.shape
+            baseline_concatenated = np.array([x.split(',') for x in baseline_concatenated.ravel()], dtype=float)
+            baseline_concatenated = baseline_concatenated.reshape(num_robot, num_times, 2)
+
+            for window_size in range(1, 10):
+                w_displacement_array = np.array([])
+                base_w_displacement_array = np.array([])
+
+                if msd_type == 'windowed':
+                    base_win_disp = utils.window_displacement(baseline_concatenated, window_size)
+                    win_disp = utils.window_displacement(positions_concatenated, window_size)
+                else:
+                    win_disp = utils.fixed_window_displacement(positions_concatenated, window_size)
+                    base_win_disp = utils.fixed_window_displacement(baseline_concatenated, window_size)
+                    # win_disp = utils.time_mean_square_displacement(positions_concatenated)
+                    # base_win_disp = utils.time_mean_square_displacement(baseline_concatenated)
+
+                w_displacement_array = np.vstack(
+                    [w_displacement_array, win_disp]) if w_displacement_array.size else win_disp
+                base_w_displacement_array = np.vstack(
+                    [base_w_displacement_array, base_win_disp]) if base_w_displacement_array.size else base_win_disp
+                # mean_wmsd = win_disp.mean()
+
+                total_experiment_wmsd.append(w_displacement_array)
+                baseline_experiment_wmsd.append(base_w_displacement_array)
+
+                if msd_type == 'time_msd':
+                    break
+            # utils.plot_both_wmsd(windowed, baseline_experiment_wmsd, total_experiment_wmsd, alpha_str, rho_str, num_robots,
+            #                     title, result_time_dir)
+
+            with open('total_experiment.pkl', 'wb') as f:
+                pickle.dump(total_experiment_wmsd, f)
+            with open('total_baseline.pkl', 'wb') as f:
+                pickle.dump(baseline_experiment_wmsd, f)
+
+            utils.plot_both_wmsd(baseline_experiment_wmsd, total_experiment_wmsd, alpha_str, rho_str, num_robots,
+                                 result_time_dir, msd_type)
+
+        if config.density_maps_flag:
+            distances = utils.distance_from_the_origin(positions_concatenated)
+            occurrences = utils.get_occurrences(distances, b_edges, runs)
+
+            if not config.open_space_flag and config.density_maps_flag:
+                utils.time_plot_histogram(occurrences.T, b_edges[1:], alpha_str, rho_str, num_robots,
+                                          distance_heatmap_dir)

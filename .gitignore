@@ -1,9 +1,12 @@
 results
 Plots
 .ipynb_checkpoints/
+__pycache__
 .idea
 *.png
 *.txt
 *.tsv
 DHTF/output.txt
 DHTF/results_*
+LMCRW/results_*
+
